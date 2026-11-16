@@ -1,0 +1,15 @@
+{
+  "name": "cpi-config-manager",
+  "version": "1.0.0",
+  "description": "CPI Configuration Manager — export/import SAP Cloud Integration iflow parameters across environments",
+  "scripts": {
+    "start": "cd backend && node src/index.js",
+    "dev": "concurrently -n backend,frontend -c cyan,magenta \"cd backend && node src/index.js\" \"cd frontend && npx vite\"",
+    "build": "cd frontend && npx vite build",
+    "build:start": "npm run build && npm start",
+    "install:all": "cd backend && npm install && cd ../frontend && npm install"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

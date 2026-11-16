@@ -1,0 +1,11 @@
+# Dependencies
+node_modules/
+
+# Build output (copied to backend/public/ by npm run build)
+dist/
+
+# Vite cache
+.vite/
+
+# Logs
+*.log
