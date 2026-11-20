@@ -2,17 +2,17 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   Select, Button, Space, Typography, Table, Tag, Alert,
   message, Divider, Collapse, Checkbox,
-  Modal, Spin, Tooltip, Upload
+  Modal, Spin, Tooltip, Upload, Popconfirm
 } from 'antd';
 import {
   SyncOutlined, RocketOutlined, ReloadOutlined,
   CheckCircleOutlined, FolderOutlined,
-  ImportOutlined, UploadOutlined, InboxOutlined
+  ImportOutlined, UploadOutlined, InboxOutlined, DeleteOutlined
 } from '@ant-design/icons';
 import useStore from '../store';
 import {
   getIflows, previewImport, deployIflows,
-  getImportInventory, uploadImportFiles
+  getImportInventory, uploadImportFiles, clearImportFolder
 } from '../api';
 
 const { Title, Text } = Typography;
@@ -71,7 +71,7 @@ export default function Import() {
     const detectedEnv = tenant?.environment || 'dev';
     setEnv(detectedEnv);
     setDiffs([]);
-    setApplyResult(null);
+    clearImport();
     loadIflows(targetTenantId);
     loadInventory(detectedEnv);
   }, [targetTenantId]);
@@ -157,7 +157,7 @@ export default function Import() {
     if (selectedWithFiles.length === 0) return message.warning('No iflows with files selected');
     setDiffLoading(true);
     setDiffs([]);
-    setApplyResult(null);
+    clearImport();
     setChangedFilter(false);
     try {
       const data = await previewImport({
@@ -198,6 +198,20 @@ export default function Import() {
       message.error(`Upload failed: ${err.message}`);
     } finally {
       setUploading(false);
+    }
+  };
+
+  const handleClearImports = async () => {
+    if (!env) return;
+    try {
+      const r = await clearImportFolder(env);
+      message.success(`Cleared ${r.cleared} file(s) from imports/${env}/`);
+      setInventory({});
+      setSelectedKeys([]);
+      setDiffs([]);
+      clearImport();
+    } catch (err) {
+      message.error(`Clear failed: ${err.message}`);
     }
   };
 
@@ -326,7 +340,7 @@ export default function Import() {
         </Space>
 
         {targetTenantId && (
-          <div style={{ marginTop: 12, display: 'flex', gap: 24 }}>
+          <div style={{ marginTop: 12, display: 'flex', gap: 24, alignItems: 'center' }}>
             <Space size={4}>
               <FolderOutlined style={{ color: '#1677ff' }} />
               <Text style={{ fontSize: 12 }}>
@@ -338,6 +352,17 @@ export default function Import() {
                 <CheckCircleOutlined style={{ color: '#52c41a' }} />
                 <Text style={{ fontSize: 12 }}><Text strong>{matchedCount}</Text> of {iflows.length} iflows matched</Text>
               </Space>
+            )}
+            {fileCount > 0 && env && (
+              <Popconfirm
+                title={`Delete all files in imports/${env}/?`}
+                description="This removes the local copies. You can re-upload or re-export at any time."
+                okText="Delete"
+                okButtonProps={{ danger: true }}
+                onConfirm={handleClearImports}
+              >
+                <Button danger size="small" icon={<DeleteOutlined />}>Clear Import Files</Button>
+              </Popconfirm>
             )}
           </div>
         )}

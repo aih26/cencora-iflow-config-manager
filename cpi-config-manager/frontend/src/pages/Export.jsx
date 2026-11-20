@@ -2,13 +2,13 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   Select, Button, Space, Typography, Table, Tag, Radio,
   message, Alert, Statistic, Row, Col, Input, Tooltip,
-  Divider, Badge, Collapse
+  Divider, Badge, Collapse, Popconfirm
 } from 'antd';import {
   ExportOutlined, ReloadOutlined, SearchOutlined,
-  CheckCircleOutlined, DownloadOutlined, FolderOutlined
+  CheckCircleOutlined, DownloadOutlined, FolderOutlined, DeleteOutlined
 } from '@ant-design/icons';
 import useStore from '../store';
-import { getIflows, exportConfigs, getExportFiles, getExportInventory, patchExportSettings, exportDownloadUrl } from '../api';
+import { getIflows, exportConfigs, getExportFiles, getExportInventory, patchExportSettings, exportDownloadUrl, clearExportFolder } from '../api';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -73,7 +73,7 @@ export default function Export() {
     if (!selectedTenantId) { setIflows([]); setInventory({}); setSelectedKeys([]); return; }
     setSearch('');
     setPkgFilter([]);
-    setResult(null);
+    clearExport();
     loadData(selectedTenantId);
   }, [selectedTenantId]);
 
@@ -156,6 +156,21 @@ export default function Export() {
     });
     patchExportSettings({ format, folderStructure }).catch(() => {});
     startExport({ tenantId: selectedTenantId, selections, format, folderStructure });
+  };
+
+  const handleClearExports = async () => {
+    if (!tenant?.environment) return;
+    try {
+      const r = await clearExportFolder(tenant.environment);
+      message.success(`Cleared ${r.cleared} file(s) from exports/${tenant.environment}/`);
+      setInventory({});
+      setIflowsCache(`${selectedTenantId}__`, { ...(iflowsCache[`${selectedTenantId}__`] || {}), exportInventory: {} });
+      setExportFiles(null);
+      clearExport();
+      loadExportFiles();
+    } catch (err) {
+      message.error(`Clear failed: ${err.message}`);
+    }
   };
 
   const exportCount = selectedKeys.length > 0 ? selectedKeys.length : iflows.length;
@@ -363,6 +378,17 @@ export default function Export() {
                     Download ZIP
                   </Button>
                 </Tooltip>
+              )}
+              {tenant?.environment && (
+                <Popconfirm
+                  title={`Delete all files in exports/${tenant.environment}/?`}
+                  description="This cannot be undone. You can re-export at any time."
+                  okText="Delete"
+                  okButtonProps={{ danger: true }}
+                  onConfirm={handleClearExports}
+                >
+                  <Button danger icon={<DeleteOutlined />}>Clear Exports</Button>
+                </Popconfirm>
               )}
             </Space>
           </div>

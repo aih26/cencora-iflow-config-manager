@@ -252,15 +252,17 @@ const updateConfiguration = async (tenantId, iflowId, paramKey, paramValue, data
     return res;
   };
 
-  // Try $links URL (requires real version, not 'active' alias)
-  const linksUrl = `${tenant.host}/api/v1/IntegrationDesigntimeArtifacts(Id='${encodeId(iflowId)}',Version='${version}')/$links/Configurations('${encodeId(paramKey)}')`;
-  let res = await retryWithFreshCsrf(linksUrl);
+  // Primary: direct /Configurations navigation property update (semantically correct for OData)
+  const configUrl = `${tenant.host}/api/v1/IntegrationDesigntimeArtifacts(Id='${encodeId(iflowId)}',Version='${version}')/Configurations('${encodeId(paramKey)}')`;
+  let res = await retryWithFreshCsrf(configUrl);
+  console.log(`[updateConfig] ${iflowId}/${paramKey} direct → HTTP ${res.status}`);
 
-  // $links not supported on all tenants — fall back to /Configurations navigation
-  if (res.status === 501 || res.status === 404) {
-    console.log(`[updateConfig] $links returned ${res.status} — trying /Configurations fallback`);
-    const configUrl = `${tenant.host}/api/v1/IntegrationDesigntimeArtifacts(Id='${encodeId(iflowId)}',Version='${version}')/Configurations('${encodeId(paramKey)}')`;
-    res = await retryWithFreshCsrf(configUrl);
+  // Fallback: $links URL (some CPI tenants route updates through this endpoint)
+  if (res.status === 501 || res.status === 404 || res.status === 405) {
+    console.log(`[updateConfig] /Configurations returned ${res.status} — trying $links fallback`);
+    const linksUrl = `${tenant.host}/api/v1/IntegrationDesigntimeArtifacts(Id='${encodeId(iflowId)}',Version='${version}')/$links/Configurations('${encodeId(paramKey)}')`;
+    res = await retryWithFreshCsrf(linksUrl);
+    console.log(`[updateConfig] $links → HTTP ${res.status}`);
   }
 
   if (res.status !== 200 && res.status !== 202 && res.status !== 204) {

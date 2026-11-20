@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route, NavLink, useLocation } from 'react-router-dom';
-import { ConfigProvider, Layout, Menu, theme, Spin, Avatar, Typography, Badge } from 'antd';
+import { ConfigProvider, Layout, Menu, theme, Spin, Avatar, Typography, Badge, Alert } from 'antd';
 import {
   DashboardOutlined,
   ExportOutlined,
@@ -16,6 +16,27 @@ import Export from './pages/Export';
 import Import from './pages/Import';
 import Compare from './pages/Compare';
 import SettingsPage from './pages/Settings';
+
+class PageErrorBoundary extends React.Component {
+  constructor(props) { super(props); this.state = { error: null }; }
+  static getDerivedStateFromError(e) { return { error: e }; }
+  componentDidCatch(e) { console.error('[PageErrorBoundary]', e); }
+  render() {
+    if (this.state.error) {
+      return (
+        <div style={{ padding: 40 }}>
+          <Alert
+            type="error"
+            message="Page crashed"
+            description={this.state.error?.message || String(this.state.error)}
+            action={<a href="javascript:void(0)" onClick={() => this.setState({ error: null })}>Try again</a>}
+          />
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 const { Sider, Content, Header } = Layout;
 const { Text } = Typography;
@@ -101,13 +122,15 @@ function AppLayout() {
                 <Spin size="large" />
               </div>
             ) : (
-              <Routes>
-                <Route path="/" element={<Dashboard />} />
-                <Route path="/export" element={<Export />} />
-                <Route path="/import" element={<Import />} />
-                <Route path="/compare" element={<Compare />} />
-                <Route path="/settings/*" element={<SettingsPage />} />
-              </Routes>
+              <PageErrorBoundary key={location.pathname}>
+                <Routes>
+                  <Route path="/" element={<Dashboard />} />
+                  <Route path="/export" element={<Export />} />
+                  <Route path="/import" element={<Import />} />
+                  <Route path="/compare" element={<Compare />} />
+                  <Route path="/settings/*" element={<SettingsPage />} />
+                </Routes>
+              </PageErrorBoundary>
             )}
           </Content>
         </Layout>
